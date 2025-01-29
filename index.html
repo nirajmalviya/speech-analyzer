@@ -212,36 +212,39 @@
         function toggleSendButton() {
             sendButton.disabled = userInput.value.trim() === '';
         }
-        function sendMessage() {
-            let userMessage = userInput.value.trim() || speechBuffer;
-            if (userMessage === "") return;
-            // Append user's message to the chat
-            appendMessage('</div>user', userMessage);
-            userInput.value = '';  // Clear input field
-            toggleSendButton();
-            speechBuffer = ""; // Clear the speech buffer after sending
-            // Call the backend (Flask) to get the chatbot response
-            fetch('https://speech-analyzer-q2nn.onrender.com', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: userMessage })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    let botResponse = data.response;
-                    // Check if the response is a speech evaluation
-                    if (data.type === 'speech_evaluation') {
-                        appendMessage('bot', formatEvaluationResponse(data));
-                    } else {
-                        appendMessage('bot', botResponse);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+       function sendMessage() {
+    let userMessage = userInput.value.trim() || speechBuffer;
+    if (userMessage === "") return;
+
+    // Append user's message to the chat
+    appendMessage('user', userMessage);
+    userInput.value = '';  // Clear input field
+    toggleSendButton();
+    speechBuffer = ""; // Clear speech buffer after sending
+
+    // Call the backend (Flask) to get the chatbot response
+    fetch('https://speech-analyzer-q2nn.onrender.com/get_response', { 
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: userMessage })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
         }
+        return response.json();
+    })
+    .then(data => {
+        let botResponse = data.response || "No response from server.";
+        appendMessage('bot', botResponse);
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        appendMessage('bot', "⚠️ Error: Unable to connect to the server.");
+    });
+}
         function appendMessage(sender, message) {
             let messageDiv = document.createElement("div");
             messageDiv.classList.add(sender === 'user' ? 'user-msg' : 'bot-msg');
